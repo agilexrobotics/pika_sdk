@@ -24,7 +24,8 @@ class Sense:
     
     def __init__(self, port='/dev/ttyUSB0'):
         self.port = port
-        self.serial_comm = SerialComm(port=port)
+        json_pattern = r'\{\r\n"Command":[0-1],\r\n"AS5047":\{\r\n"angle":[^\r\n]*,\r\n"rad":[^\r\n]*\r\n\},\r\n\r\n"IMU":\{\r\n"acc":\[[^\r\n]*\],\r\n"gyr":\[[^\r\n]*\],\r\n"pitch":[^\r\n]*,\r\n"roll":[^\r\n]*,\r\n"yaw":[^\r\n]*\r\n\}\r\n\r\n\}'
+        self.serial_comm = SerialComm(port=port, json_pattern=json_pattern)
         self.is_connected = False
         self.data_lock = threading.Lock()
         

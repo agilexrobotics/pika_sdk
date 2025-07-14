@@ -35,7 +35,8 @@ class Gripper:
     
     def __init__(self, port='/dev/ttyUSB0'):
         self.port = port
-        self.serial_comm = SerialComm(port=port)
+        json_pattern = r'\{\r\n"motor":\{\r\n"Speed":[^\r\n]*,\r\n"Current":[^\r\n]*,\r\n"Position":[^\r\n]*\r\n\}\r\n,\r\n"motorstatus":\{\r\n"Voltage":[^\r\n]*,\r\n"DriverTemp":[^\r\n]*,\r\n"MotorTemp":[^\r\n]*,\r\n"Status":[^\r\n]*,\r\n"BusCurrent":[^\r\n]*\r\n\}\r\n\r\n\}'
+        self.serial_comm = SerialComm(port=port, json_pattern=json_pattern)
         self.is_connected = False
         self.data_lock = threading.Lock()
         self.motor_data = {

@@ -10,6 +10,7 @@ import time
 import json
 import serial
 import logging
+import re
 
 # 配置日志
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -25,7 +26,7 @@ class SerialComm:
         timeout (float): 超时时间，默认为1.0秒
     """
     
-    def __init__(self, port='/dev/ttyUSB0', baudrate=460800, timeout=1.0):
+    def __init__(self, port='/dev/ttyUSB0', baudrate=460800, timeout=1.0, json_pattern=None):
         self.port = port
         self.baudrate = baudrate
         self.timeout = timeout
@@ -37,6 +38,7 @@ class SerialComm:
         self.callback = None
         self.data_lock = threading.Lock()
         self.latest_data = {}
+        self.json_pattern = json_pattern
     
     def connect(self):
         """
@@ -185,33 +187,24 @@ class SerialComm:
             dict: 解析到的JSON对象，如果没有找到则返回None
         """
         try:
-            # 查找JSON对象的开始和结束位置
-            start = self.buffer.find('{')
-            if start == -1:
-                self.buffer = ""
-                return None
+            if self.json_pattern:
+                matches = list(re.finditer(self.json_pattern, self.buffer))
+                if matches:
+                    last_match = matches[-1]
+                    last_match_str = last_match.group()
+                    self.buffer = self.buffer[last_match.end():]
+                    return json.loads(last_match_str)
+                else:
+                    return None
+            else:
+                raise ValueError("json_pattern is not set")
             
-            # 使用栈来匹配括号
-            stack = []
-            for i in range(start, len(self.buffer)):
-                if self.buffer[i] == '{':
-                    stack.append(i)
-                elif self.buffer[i] == '}':
-                    if stack:
-                        stack.pop()
-                        if not stack:  # 找到完整的JSON对象
-                            json_str = self.buffer[start:i+1]
-                            self.buffer = self.buffer[i+1:]
-                            return json.loads(json_str)
-            
-            # 如果没有找到完整的JSON对象，保留缓冲区
-            return None
         except json.JSONDecodeError as e:
             logger.error(f"JSON解析错误: {e}")
-            self.buffer = self.buffer[start+1:]  # 跳过错误的开始位置
+            self.buffer = ""  # 跳过错误的开始位置
             return None
         except Exception as e:
-            logger.error(f"查找JSON对象异常: {e}")
+            logger.error(f"通信Json异常: {e}")
             self.buffer = ""
             return None
     
